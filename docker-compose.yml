@@ -1,0 +1,108 @@
+version: '3.9'
+
+services:
+    nginx:
+        build:
+            context: .
+            dockerfile: docker/nginx.dockerfile
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./interview:/var/www/html
+        depends_on:
+            - fpm
+        networks:
+            - jooksms-backend-network
+        profiles:
+            - web
+    mysql:
+        image: mariadb:latest
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.5"
+                    memory: 200M
+        ports:
+            - 3306:3306
+        environment:
+            MYSQL_DATABASE: test_db
+            MYSQL_USER: development
+            MYSQL_PASSWORD: secret
+            MYSQL_ROOT_PASSWORD: secret
+        #volumes:
+        #    - ./mysql:/var/lib/mysql
+        networks:
+            - jooksms-backend-network
+        profiles:
+            - web
+            - command
+    fpm:
+        build:
+            context: .
+            dockerfile: docker/fpm.dockerfile
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.5"
+                    memory: 200M
+        networks:
+            - jooksms-backend-network
+            - jooksms-frontend-network
+        expose:
+            - 9000
+        volumes:
+            - ./interview:/var/www/html
+        env_file:
+            -   .env
+        profiles:
+            - web
+    composer:
+        build:
+            context: .
+            dockerfile: docker/composer.dockerfile
+        deploy:
+            resources:
+                limits:
+                    cpus: "0.5"
+                    memory: 400M
+        environment:
+            COMPOSER_MEMORY_LIMIT: -1
+        env_file:
+            -   .env
+        volumes:
+            - ./interview:/var/www/html
+        networks:
+            - jooksms-backend-network
+        working_dir: /var/www/html
+        profiles:
+            - command
+    artisan:
+        build:
+            context: .
+            dockerfile: docker/artisan.dockerfile
+        env_file:
+            -   .env
+        volumes:
+            - ./interview:/var/www/html
+        networks:
+            - jooksms-backend-network
+        working_dir: /var/www/html
+        profiles:
+            - command
+    npm:
+        build:
+            context: .
+            dockerfile: docker/npm.dockerfile
+        volumes:
+            - ./interview:/var/www/html
+        networks:
+            - jooksms-backend-network
+        working_dir: /var/www/html
+        profiles:
+            - command
+networks:
+    jooksms-backend-network:
+        driver: bridge
+    jooksms-frontend-network:
+        driver: bridge
